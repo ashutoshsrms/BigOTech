@@ -41,7 +41,6 @@ This is a Node.js application to create, fill, and retrieve form data using REST
 
 ## API Endpoints
 
-# API Endpoints
 
 ## Create Form
 - URL: POST /api/form

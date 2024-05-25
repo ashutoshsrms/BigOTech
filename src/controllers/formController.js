@@ -46,13 +46,28 @@ exports.getAllData = async (req, res) => {
   try {
     const { form_title } = req.query;
     const form = await Form.findOne({ where: { title: form_title } });
+    console.log(form);
     if (!form) {
       return res.status(404).json({ error: "Form not found" });
     }
-    const submissions = await Submission.findAll({
+    const pageSize = 10; // Number of submissions per page
+    const page = req.query.page || 1; // Current page, default is 1
+    const offset = (page - 1) * pageSize;
+
+    const submissions = await Submission.findAndCountAll({
       where: { uniqueId: form.uniqueId },
+      attributes: ["name", "email", "phoneNumber", "isGraduate"], // Select specific fields
+      limit: pageSize,
+      offset: offset,
     });
-    res.status(200).json({ data: submissions });
+
+    const totalPages = Math.ceil(submissions.count / pageSize);
+
+    res.status(200).json({
+      currentPage: page,
+      totalPages: totalPages,
+      submissions: submissions.rows,
+    });
   } catch (error) {
     logger.error(error.message);
     res.status(400).json({ error: error.message });
