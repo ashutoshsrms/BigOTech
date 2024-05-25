@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require("uuid");
 const Form = require("../models/form");
 const Submission = require("../models/submission");
 const logger = require("../utils/logger");
+const { Op } = require("sequelize");
 
 exports.createForm = async (req, res) => {
   try {
@@ -14,10 +15,10 @@ exports.createForm = async (req, res) => {
       phoneNumber,
       isGraduate,
     });
-    res.status(201).json(newForm);
+     res.status(201).json(newForm);
   } catch (error) {
     logger.error(error.message);
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Failed to create form" });
   }
 };
 
@@ -42,34 +43,50 @@ exports.fillData = async (req, res) => {
   }
 };
 
+
 exports.getAllData = async (req, res) => {
   try {
     const { form_title } = req.query;
-    const form = await Form.findOne({ where: { title: form_title } });
-    console.log(form);
-    if (!form) {
+    const forms = await Form.findAll({ where: { title: form_title } });
+
+    if (!forms || forms.length === 0) {
       return res.status(404).json({ error: "Form not found" });
     }
-    const pageSize = 10; // Number of submissions per page
-    const page = req.query.page || 1; // Current page, default is 1
+
+    const uniqueIds = forms.map((form) => form.uniqueId);
+
+    const pageSize = 10;
+    const page = parseInt(req.query.page, 10) || 1;
     const offset = (page - 1) * pageSize;
 
     const submissions = await Submission.findAndCountAll({
-      where: { uniqueId: form.uniqueId },
-      attributes: ["name", "email", "phoneNumber", "isGraduate"], // Select specific fields
+      where: { uniqueId: { [Op.in]: uniqueIds } },
+      attributes: ["uniqueId", "name", "email", "phoneNumber", "isGraduate"],
       limit: pageSize,
       offset: offset,
     });
 
     const totalPages = Math.ceil(submissions.count / pageSize);
 
+    // Group submissions by form name or uniqueId
+    const groupedSubmissions = forms.reduce((acc, form) => {
+      const formName = form.name || form.uniqueId;
+      acc[formName] = submissions.rows.filter(
+        (sub) => sub.uniqueId === form.uniqueId
+      );
+      return acc;
+    }, {});
+
     res.status(200).json({
       currentPage: page,
       totalPages: totalPages,
-      submissions: submissions.rows,
+      submissions: groupedSubmissions,
     });
   } catch (error) {
     logger.error(error.message);
     res.status(400).json({ error: error.message });
   }
 };
+
+
+

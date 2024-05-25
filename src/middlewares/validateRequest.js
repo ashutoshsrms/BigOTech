@@ -1,10 +1,14 @@
 const { check, validationResult } = require("express-validator");
 
+const phoneRegex = /^\d{10}$/;
+
 exports.validateCreateForm = [
   check("title").isString(),
   check("name").isString(),
   check("email").isEmail(),
-  check("phoneNumber").isString(),
+  check("phoneNumber")
+    .matches(phoneRegex)
+    .withMessage("Invalid phone number format"),
   check("isGraduate").isBoolean(),
   (req, res, next) => {
     const errors = validationResult(req);
@@ -19,7 +23,9 @@ exports.validateFillData = [
   check("uniqueId").isUUID(),
   check("name").isString(),
   check("email").isEmail(),
-  check("phoneNumber").isString(),
+  check("phoneNumber")
+    .matches(phoneRegex)
+    .withMessage("Invalid phone number format"),
   check("isGraduate").isBoolean(),
   (req, res, next) => {
     const errors = validationResult(req);
